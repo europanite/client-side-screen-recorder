@@ -1,9 +1,9 @@
 /* Recording-first layout. Override the original theme without touching the minified CSS. */
-.top-bar { height: 40px; padding: 0 18px; }
-.brand { font-size: 12px; letter-spacing: .4px; gap: 6px; }
-.brand-icon { width: 21px; height: 21px; border-radius: 6px; font-size: 10px; box-shadow: none; }
-.repo-link { padding: 5px 8px; font-size: 0; gap: 0; }
-.repo-link svg { width: 17px; height: 17px; }
+.top-bar { height: 64px; padding: 0 20px; }
+.brand { font-size: 26px; letter-spacing: 1px; gap: 10px; }
+.brand-icon { width: 34px; height: 34px; border-radius: 9px; font-size: 16px; box-shadow: none; }
+.repo-link { padding: 8px 12px; font-size: 13px; gap: 8px; }
+.repo-link svg { width: 18px; height: 18px; flex-shrink: 0; }
 .main-content { max-width: 1440px; padding: 12px 18px 22px; }
 .studio-grid { grid-template-columns: minmax(0, 1.8fr) minmax(275px, .8fr); gap: 14px; }
 .card { border-radius: 11px; }
@@ -14,12 +14,15 @@
 .toggle-row,.select-row { padding: 15px 0; }
 @media(max-width:900px) { .studio-grid { grid-template-columns: 1fr; } }
 @media(max-width:610px) {
-  .top-bar { height: 38px; padding: 0 12px; }
+  .top-bar { height: 56px; padding: 0 12px; }
+  .brand { font-size: 22px; }
+  .brand-icon { width: 30px; height: 30px; }
+  .repo-link { padding: 7px 9px; font-size: 11px; gap: 6px; }
+  .repo-link svg { width: 16px; height: 16px; }
   .main-content { padding: 10px 12px 18px; }
   .settings-grid { padding: 0 14px; }
 }
 
-.build-mark { font-size: 9px; color: #867d99; letter-spacing: 0; font-weight: 500; }
 
 /* Audio diagnostics */
 .input-source-row { border-bottom: 1px solid #2a2634; padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }

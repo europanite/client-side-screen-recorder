@@ -1,0 +1,11 @@
+FROM node:24-bookworm-slim
+
+# Keep the repository tree under /app so ../../tests resolves from frontend/app.
+WORKDIR /app
+
+COPY frontend/app/package*.json frontend/app/
+RUN cd frontend/app && npm install --no-audit --no-fund
+
+COPY . .
+
+CMD ["sh", "-c", "cd frontend/app && npm test && npm run typecheck && npm run build"]

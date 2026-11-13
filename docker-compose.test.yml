@@ -1,4 +1,7 @@
 services:
   frontend_test:
-    build: .
-    command: sh -c "npm test && npm run typecheck && npm run build"
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.test
+    working_dir: /app
+    command: sh -c "cd frontend/app && npm test && npm run typecheck && npm run build"
