@@ -1,9 +1,9 @@
 /* Recording-first layout. Override the original theme without touching the minified CSS. */
 .top-bar { height: 64px; padding: 0 20px; }
-.brand { font-size: 26px; letter-spacing: 1px; gap: 10px; }
+.brand { font-size: 26px; letter-spacing: 1px; gap: 10px; text-decoration: none; }
+.brand:hover { color: #c9aaff; }
+.brand:focus-visible { outline: 2px solid #c9aaff; outline-offset: 4px; border-radius: 4px; }
 .brand-icon { width: 34px; height: 34px; border-radius: 9px; font-size: 16px; box-shadow: none; }
-.repo-link { padding: 8px 12px; font-size: 13px; gap: 8px; }
-.repo-link svg { width: 18px; height: 18px; flex-shrink: 0; }
 .main-content { max-width: 1440px; padding: 12px 18px 22px; }
 .studio-grid { grid-template-columns: minmax(0, 1.8fr) minmax(275px, .8fr); gap: 14px; }
 .card { border-radius: 11px; }
@@ -17,8 +17,6 @@
   .top-bar { height: 56px; padding: 0 12px; }
   .brand { font-size: 22px; }
   .brand-icon { width: 30px; height: 30px; }
-  .repo-link { padding: 7px 9px; font-size: 11px; gap: 6px; }
-  .repo-link svg { width: 16px; height: 16px; }
   .main-content { padding: 10px 12px 18px; }
   .settings-grid { padding: 0 14px; }
 }
