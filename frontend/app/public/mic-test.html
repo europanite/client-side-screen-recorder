@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REC / microphone diagnostic</title>
+<style>
+:root {color-scheme:dark;font-family:system-ui,sans-serif;background:#101017;color:#f4f3fa}
+body {max-width:640px;margin:4rem auto;padding:0 1rem}label{display:block;margin:1.5rem 0 .5rem}
+select,button{font:inherit;color:inherit;background:#242131;border:1px solid #564d6d;border-radius:7px;padding:8px}
+button{cursor:pointer}button:disabled{opacity:.5;cursor:default}meter{width:100%;height:18px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#1c1a26;padding:1rem;border-radius:6px}
+a{color:#bba1ff}audio{width:100%}
+</style>
+</head>
+<body>
+<h1>Microphone test</h1>
+<p>Independent of the MP4 encoder. Audio stays in your browser.</p>
+<label for="device">Audio input</label><select id="device"><option value="">Default microphone</option></select>
+<p><button id="start">Start test</button> <button id="stop" disabled>Stop</button></p>
+<label for="meter">Input signal</label><meter id="meter" min="0" max="100" value="0"></meter>
+<pre id="status">Ready.</pre>
+<audio id="playback" controls></audio>
+<p><a href="/">Back to REC</a></p>
+<script type="module">
+const device = document.querySelector('#device');
+const start = document.querySelector('#start');
+const stop = document.querySelector('#stop');
+const meter = document.querySelector('#meter');
+const status = document.querySelector('#status');
+const playback = document.querySelector('#playback');
+let stream, context, analyser, recorder, chunks, interval, playbackUrl;
+async function refreshDevices() {
+  const selected = device.value;
+  const list = (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications');
+  device.replaceChildren(new Option('Default microphone',''));
+  for (const d of list) device.add(new Option(d.label||'Unnamed microphone',d.deviceId));
+  if([...device.options].some(o=>o.value===selected)) device.value=selected;
+}
+await refreshDevices().catch(()=>{});
+start.onclick=async()=>{
+  start.disabled=true;
+  if(playbackUrl) URL.revokeObjectURL(playbackUrl);
+  playback.removeAttribute('src');
+  status.textContent='Requesting microphone...';
+  try {
+    const audio={echoCancellation:false,noiseSuppression:false,autoGainControl:false};
+    if(device.value) audio.deviceId={exact:device.value};
+    stream=await navigator.mediaDevices.getUserMedia({audio});
+    const track=stream.getAudioTracks()[0];
+    await refreshDevices();
+    context=new AudioContext();
+    await context.resume();
+    analyser=context.createAnalyser();analyser.fftSize=2048;
+    context.createMediaStreamSource(stream).connect(analyser);
+    // Analyser is intentionally connected to a zero-gain sink so it processes
+    // continuously without playing the microphone back over the speakers.
+    const silent=context.createGain();silent.gain.value=0;
+    analyser.connect(silent).connect(context.destination);
+    const supported=['audio/webm;codecs=opus','audio/webm',''].find(v=>!v||MediaRecorder.isTypeSupported(v));
+    recorder=new MediaRecorder(stream,supported?{mimeType:supported}:undefined);
+    chunks=[];
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    recorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});
+      playbackUrl=URL.createObjectURL(blob);playback.src=playbackUrl;
+      status.textContent+='\nRecorded '+blob.size+' bytes. Play the audio above.';
+    };
+    recorder.start(250);
+    let peak=0;
+    interval=setInterval(()=>{
+      const values=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(values);
+      const rms=Math.sqrt(values.reduce((sum,v)=>sum+v*v,0)/values.length);
+      peak=Math.max(peak,rms);
+      meter.value=Math.min(100,rms*450);
+      status.textContent='Device: '+track.label+'\nTrack: '+track.readyState+', muted='+track.muted+'\nConstraints: '+JSON.stringify(track.getSettings())+'\nCurrent RMS: '+rms.toFixed(5)+'\nMax RMS: '+peak.toFixed(5);
+    },200);
+    stop.disabled=false;
+  }catch(err){
+    clearInterval(interval);
+    stream?.getTracks().forEach(t=>t.stop());
+    await context?.close();context=null;stream=null;
+    status.textContent=String(err);start.disabled=false;
+  }
+};
+stop.onclick=async()=>{
+  clearInterval(interval);
+  recorder?.state==='recording'&&recorder.stop();
+  stream?.getTracks().forEach(t=>t.stop());
+  await context?.close();context=null;
+  stop.disabled=true;start.disabled=false;meter.value=0;
+};
+window.addEventListener('pagehide',()=>{clearInterval(interval);stream?.getTracks().forEach(t=>t.stop());context?.close()});
+</script>
+</body>
+</html>

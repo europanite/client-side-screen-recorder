@@ -1,0 +1,4 @@
+services:
+  frontend_test:
+    build: .
+    command: sh -c "npm test && npm run typecheck && npm run build"
