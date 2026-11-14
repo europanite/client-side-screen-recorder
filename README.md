@@ -7,6 +7,10 @@
 
 !["image"](./assets/images/web_ui.png)
 
+## PlayGround
+
+[▶ Open the app](https://europanite.github.io/client-side-screen-recorder/)
+
 Capture your screen, tab, or window and optionally record microphone and supported system/tab audio, entirely in your browser. Export a **MP4**. 
 
 ## Features
