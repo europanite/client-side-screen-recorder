@@ -5,7 +5,9 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 
-Capture your screen, tab, or window and optionally record microphone and supported system/tab audio, entirely in your browser. Export a real **MP4 (H.264 video + AAC audio)**. 
+!["image"](./assets/images/web_ui.png)
+
+Capture your screen, tab, or window and optionally record microphone and supported system/tab audio, entirely in your browser. Export a **MP4**. 
 
 ## Features
 
@@ -18,7 +20,9 @@ Capture your screen, tab, or window and optionally record microphone and support
 
 ## Local development
 
-Requires Node.js **22+** and npm.
+Requires Node.js **22+** and npm. The default PC audio source is **Browser audio (system / window / tab)**, with no virtual device installation required:
+
+Sharing audio is subject to the browser, OS, and the user's selection in the sharing dialog. If no PC or microphone audio track can be acquired, recording continues with available tracks and a warning rather than failing solely because audio is missing.
 
 ```bash
 cd frontend/app
@@ -41,9 +45,10 @@ Or use Docker:
 
 ```bash
 docker compose up --build
-# http://localhost:5173
+# Open http://localhost:5173
 
-docker compose -f docker-compose.test.yml up --build --exit-code-from frontend_test
+# Run tests, TypeScript check, and production build in a separate container:
+docker compose -f docker-compose.test.yml run --rm --build frontend_test
 ```
 
 
