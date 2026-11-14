@@ -11,10 +11,10 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Install dependencies
         working-directory: frontend/app
         run: npm install --no-audit --no-fund
@@ -27,7 +27,7 @@ jobs:
       - name: Production build
         working-directory: frontend/app
         run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: screen-recorder-dist
           path: frontend/app/dist
