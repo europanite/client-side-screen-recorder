@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsBar } from './components/SettingsBar';
 import { useScreenRecorder } from './hooks/useScreenRecorder';
 import type { RecorderSettings } from './lib/recorder';
@@ -11,10 +11,22 @@ const DEFAULT_SETTINGS: RecorderSettings = {
 
 export default function App() {
   const [settings, setSettings] = useState<RecorderSettings>(DEFAULT_SETTINGS);
-  const { status, error, warning, details, result, duration, audioLevels, start, stop, pause, resume } = useScreenRecorder();
+  const { status, error, warning, details, result, previewStream, duration, audioLevels, start, stop, pause, resume } = useScreenRecorder();
+  const livePreviewRef = useRef<HTMLVideoElement>(null);
   const supported = useMemo(isCaptureSupported, []);
   const recording = status === 'recording' || status === 'paused';
   const busy = status === 'starting' || status === 'finalizing';
+
+  useEffect(() => {
+    const video = livePreviewRef.current;
+    if (!video || !recording || !previewStream) return;
+    video.srcObject = previewStream;
+    void video.play().catch(() => {});
+    return () => {
+      video.pause();
+      video.srcObject = null;
+    };
+  }, [previewStream, recording]);
 
   return (
     <div className="shell">
@@ -29,9 +41,9 @@ export default function App() {
           <div className="card monitor-card">
             <div className="card-header"><span>Client Side Screen Recorder</span><div className={`live-pill ${recording ? 'is-live' : ''}`}><span />{status === 'recording' ? 'Client Side Screen Recorder' : status === 'paused' ? 'PAUSED' : 'STANDBY'}</div></div>
             <div className={`screen ${result ? 'has-video' : ''}`}>
-              {result ? <video className="preview" src={result.url} controls playsInline aria-label="Recorded MP4 preview" /> : <div className="empty-state">
-                <h2>{recording ? 'Client Side Screen Recorder' : busy ? 'Preparing…' : 'Ready'}</h2>
-              </div>}
+              {result ? <video className="preview" src={result.url} controls playsInline aria-label="Recorded MP4 preview" />
+                : recording ? <video ref={livePreviewRef} className="preview" autoPlay muted playsInline aria-label="Live screen preview" />
+                : <div className="empty-state"><h2>{busy ? 'Preparing…' : 'Ready'}</h2></div>}
               {recording && <div className="recording-badge"><span /> {formatDuration(duration)}</div>}
             </div>
             <div className="control-area">
