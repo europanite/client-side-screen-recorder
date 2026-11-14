@@ -202,6 +202,11 @@ export class ScreenRecorder {
     }
   }
 
+  /** Reuse the captured video track for the live preview; never acquire the screen twice. */
+  getPreviewStream(): MediaStream | null {
+    return this.screenTrack ? new MediaStream([this.screenTrack]) : null;
+  }
+
   getAudioLevels(): AudioLevels {
     const read = (analyser?: AnalyserNode): number | null => {
       if (!analyser || this.audioContext?.state !== 'running') return null;

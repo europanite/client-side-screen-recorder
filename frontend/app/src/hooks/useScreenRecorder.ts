@@ -12,6 +12,7 @@ export function useScreenRecorder() {
   const [warning, setWarning] = useState('');
   const [details, setDetails] = useState<CaptureDetails | null>(null);
   const [result, setResult] = useState<RecordingResult | null>(null);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const urlRef = useRef<string | null>(null);
   const recorderRef = useRef<ScreenRecorder | null>(null);
   const encoderErrorRef = useRef<Error | null>(null);
@@ -53,6 +54,7 @@ export function useScreenRecorder() {
     if (statusRef.current !== 'recording' && statusRef.current !== 'paused') return;
     setDuration(secondsElapsed());
     updateStatus('finalizing');
+    setPreviewStream(null);
     try {
       const blob = await recorderRef.current!.stop();
       if (encoderErrorRef.current) throw encoderErrorRef.current;
@@ -84,6 +86,7 @@ export function useScreenRecorder() {
     setWarning('');
     setDetails(null);
     setResult(null);
+    setPreviewStream(null);
     setDuration(0);
     setAudioLevels({ microphone: null, system: null });
     peakLevelsRef.current = { microphone: 0, system: 0 };
@@ -108,6 +111,7 @@ export function useScreenRecorder() {
         if (statusRef.current === 'recording' || statusRef.current === 'paused') void stop();
       });
       if (encoderErrorRef.current) throw encoderErrorRef.current;
+      setPreviewStream(recorder.getPreviewStream());
       setDetails(captureDetails);
       hasAudioInputRef.current = captureDetails.microphoneAvailable;
       hasSystemAudioRef.current = captureDetails.systemAudioAvailable;
@@ -121,6 +125,7 @@ export function useScreenRecorder() {
       startedAt.current = performance.now();
       updateStatus('recording');
     } catch (err) {
+      setPreviewStream(null);
       await recorder.release();
       recorderRef.current = null;
       setError(toError(err).message || 'Screen capture failed.');
@@ -149,5 +154,5 @@ export function useScreenRecorder() {
     void recorderRef.current?.release();
   }, []);
 
-  return { status, error, warning, details, result, duration, audioLevels, start, stop, pause, resume };
+  return { status, error, warning, details, result, previewStream, duration, audioLevels, start, stop, pause, resume };
 }
