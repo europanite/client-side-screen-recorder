@@ -59,8 +59,8 @@ export function SettingsBar({ settings, onChange, disabled }: Props) {
           <select id="pc-audio-device" aria-label="PC audio source" disabled={disabled}
             value={settings.systemAudioDeviceId ?? ''}
             onChange={(event) => patch({ systemAudioDeviceId: event.target.value || undefined })}>
-            <option value="__screenrec_auto_loopback__">ScreenRec_Loopback (auto)</option>
-            <option value="">Shared tab audio (browser)</option>
+            <option value="">Browser audio (system / window / tab)</option>
+            <option value="__screenrec_auto_loopback__">ScreenRec_Loopback (optional Linux)</option>
             {devices.filter((device) => device.deviceId !== 'default' && device.deviceId !== 'communications')
               .map((device, index) => <option key={device.deviceId} value={device.deviceId}>
                 {device.label || `Audio input ${index + 1}`}
@@ -68,6 +68,7 @@ export function SettingsBar({ settings, onChange, disabled }: Props) {
           </select>
           <button type="button" disabled={disabled} onClick={() => void refreshDevices()} aria-label="Refresh PC audio inputs">↻</button>
         </div>
+        <p className="audio-source-hint">Enable audio in the browser's sharing dialog. On Linux, share a Chrome tab for tab sound. Desktop audio needs browser/OS support or an optional audio input.</p>
       </div>}
       <label className="select-row">
         <span><strong>Frame rate</strong></span>

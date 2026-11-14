@@ -8,7 +8,7 @@ import {
 } from 'mediabunny';
 import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import { getRecordingAudioConstraints } from './audioConstraints';
-import { resolveSystemAudioSelection } from './systemAudioSelection';
+import { getDisplayCaptureOptions, resolveSystemAudioSelection } from './systemAudioSelection';
 
 // A registered custom encoder takes priority over the browser's native AAC encoder.
 // Important for Linux Chrome, where AudioEncoder exists but rejects AAC at runtime.
@@ -31,6 +31,9 @@ export type CaptureDetails = {
   resolution: string;
   audioDescription: string;
   systemAudioAvailable: boolean;
+  microphoneAvailable: boolean;
+  microphoneWarning?: string;
+  systemAudioWarning?: string;
 };
 
 /** Encodes H.264 + AAC into MP4 locally. No MediaRecorder / WebM conversion or server. */
@@ -63,22 +66,24 @@ export class ScreenRecorder {
     try {
       // Must be requested immediately from the user's click (transient activation).
       const systemSelection = resolveSystemAudioSelection(options);
-      const displayOptions = {
-        video: { frameRate: { ideal: options.frameRate, max: options.frameRate } },
-        audio: systemSelection.useDisplayAudio,
-        systemAudio: systemSelection.useDisplayAudio ? 'include' : 'exclude',
-        surfaceSwitching: 'include',
-      } as DisplayMediaStreamOptions;
-      this.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+      this.screenStream = await navigator.mediaDevices.getDisplayMedia(
+        getDisplayCaptureOptions(options.frameRate, systemSelection.useDisplayAudio),
+      );
       this.screenTrack = this.screenStream.getVideoTracks()[0] ?? null;
       if (!this.screenTrack || this.screenTrack.readyState !== 'live') {
         throw new Error('No active video track was shared.');
       }
 
+      let microphoneWarning: string | undefined;
       if (options.microphone) {
-        this.microphoneStream = await navigator.mediaDevices.getUserMedia({
-          audio: getRecordingAudioConstraints(options.microphoneDeviceId),
-        });
+        try {
+          this.microphoneStream = await navigator.mediaDevices.getUserMedia({
+            audio: getRecordingAudioConstraints(options.microphoneDeviceId),
+          });
+        } catch (error) {
+          // Microphone permission/device failures must not discard the shared video.
+          microphoneWarning = `Microphone unavailable: ${toError(error).message}`;
+        }
       }
 
       // On Linux, display capture usually supplies no desktop audio. An explicitly
@@ -87,30 +92,38 @@ export class ScreenRecorder {
       let systemAudioTrack = systemSelection.useDisplayAudio
         ? this.screenStream.getAudioTracks()[0]
         : undefined;
+      let systemAudioWarning: string | undefined;
       if (systemSelection.loopbackDeviceId) {
-        const loopbackDeviceId = systemSelection.loopbackDeviceId === '__screenrec_auto_loopback__'
-          ? (await navigator.mediaDevices.enumerateDevices()).find(device =>
-              device.kind === 'audioinput' && /screenrec[_ -]?loopback/i.test(device.label)
-            )?.deviceId
-          : systemSelection.loopbackDeviceId;
-        if (!loopbackDeviceId) throw new Error('ScreenRec_Loopback was not found. Refresh audio inputs and check microphone permission.');
-        const micDeviceId = this.microphoneStream?.getAudioTracks()[0]?.getSettings().deviceId;
-        if (options.microphone && (options.microphoneDeviceId === loopbackDeviceId || micDeviceId === loopbackDeviceId)) {
-          throw new Error('Microphone and PC audio cannot use the same selected input. Select a different microphone.');
-        }
         try {
+          const loopbackDeviceId = systemSelection.loopbackDeviceId === '__screenrec_auto_loopback__'
+            ? (await navigator.mediaDevices.enumerateDevices()).find(device =>
+                device.kind === 'audioinput' && /screenrec[_ -]?loopback/i.test(device.label)
+              )?.deviceId
+            : systemSelection.loopbackDeviceId;
+          if (!loopbackDeviceId) throw new Error('ScreenRec_Loopback was not found.');
+          const micDeviceId = this.microphoneStream?.getAudioTracks()[0]?.getSettings().deviceId;
+          if (this.microphoneStream && (options.microphoneDeviceId === loopbackDeviceId || micDeviceId === loopbackDeviceId)) {
+            throw new Error('Microphone and PC audio cannot use the same input. Select a different microphone.');
+          }
           this.desktopAudioStream = await navigator.mediaDevices.getUserMedia({
             audio: getRecordingAudioConstraints(loopbackDeviceId),
           });
+          systemAudioTrack = this.desktopAudioStream.getAudioTracks()[0];
+          if (!systemAudioTrack || systemAudioTrack.readyState !== 'live') {
+            throw new Error('The selected PC audio input did not provide an active audio track.');
+          }
         } catch (error) {
-          throw new Error(`Cannot open the selected PC audio input: ${toError(error).message}`);
-        }
-        systemAudioTrack = this.desktopAudioStream.getAudioTracks()[0];
-        if (!systemAudioTrack || systemAudioTrack.readyState !== 'live') {
-          throw new Error('The selected PC audio input did not provide an active audio track.');
+          // Explicit loopback sources are optional; video still records if unavailable.
+          systemAudioWarning = `PC audio unavailable: ${toError(error).message}`;
+          this.desktopAudioStream?.getTracks().forEach(track => track.stop());
+          this.desktopAudioStream = null;
+          systemAudioTrack = undefined;
         }
       }
       const micTrack = this.microphoneStream?.getAudioTracks()[0];
+      if (options.microphone && !micTrack && !microphoneWarning) {
+        microphoneWarning = 'No microphone track was provided.';
+      }
       // Route all selected inputs through analysers, then into ONE encoded AAC
       // track. Each meter measures the actual audio fed into the recording mix.
       // Never connect to audioContext.destination: no speaker feedback/echo.
@@ -167,8 +180,11 @@ export class ScreenRecorder {
       if (this.screenTrack.readyState !== 'live') throw new Error('Screen sharing ended before recording started.');
 
       const settings = this.screenTrack.getSettings();
+      const displaySurface = settings.displaySurface;
+      const browserAudioLabel = displaySurface === 'monitor' ? 'system audio'
+        : displaySurface === 'window' ? 'window/system audio' : 'tab audio';
       const sources = [
-        systemAudioTrack && (systemSelection.loopbackDeviceId ? `PC: ${systemAudioTrack.label || 'loopback'}` : 'tab audio'),
+        systemAudioTrack && (systemSelection.loopbackDeviceId ? `PC: ${systemAudioTrack.label || 'loopback'}` : browserAudioLabel),
         micTrack && `mic: ${micTrack.label || 'microphone'}`,
       ].filter(Boolean);
       return {
@@ -176,6 +192,9 @@ export class ScreenRecorder {
         resolution: settings.width && settings.height ? `${settings.width} × ${settings.height}` : 'Source resolution',
         audioDescription: sources.length ? sources.join(' + ') : 'No audio',
         systemAudioAvailable: !!systemAudioTrack,
+        microphoneAvailable: !!micTrack,
+        microphoneWarning,
+        systemAudioWarning,
       };
     } catch (error) {
       await this.release();

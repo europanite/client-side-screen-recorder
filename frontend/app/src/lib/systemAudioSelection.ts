@@ -9,3 +9,15 @@ export function resolveSystemAudioSelection(options: {
     loopbackDeviceId,
   };
 }
+
+/** Browser-native screen, window, or tab audio is the default PC audio path. */
+export function getDisplayCaptureOptions(frameRate: number, useDisplayAudio: boolean): DisplayMediaStreamOptions {
+  return {
+    video: { frameRate: { ideal: frameRate, max: frameRate } },
+    audio: useDisplayAudio,
+    systemAudio: useDisplayAudio ? 'include' : 'exclude',
+    // On supported browsers, allow system sound when a window is shared too.
+    windowAudio: useDisplayAudio ? 'system' : 'exclude',
+    surfaceSwitching: 'include',
+  } as DisplayMediaStreamOptions;
+}

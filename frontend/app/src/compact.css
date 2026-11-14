@@ -33,3 +33,5 @@
 .audio-meters label { display: flex; flex: 1; align-items: center; gap: 8px; color: #a79fba; min-width: 140px; font-size: 11px; }
 .audio-meters label span { min-width: 39px; }
 .audio-meters progress { width: 100%; height: 7px; accent-color: #b68dfa; }
+
+.audio-source-hint { margin: 0; color: #a79fba; font-size: 11px; line-height: 1.5; }

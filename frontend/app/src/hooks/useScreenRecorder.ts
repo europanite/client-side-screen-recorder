@@ -109,11 +109,15 @@ export function useScreenRecorder() {
       });
       if (encoderErrorRef.current) throw encoderErrorRef.current;
       setDetails(captureDetails);
-      hasAudioInputRef.current = settings.microphone;
+      hasAudioInputRef.current = captureDetails.microphoneAvailable;
       hasSystemAudioRef.current = captureDetails.systemAudioAvailable;
-      if (settings.systemAudio && !captureDetails.systemAudioAvailable) {
-        setWarning('No PC audio track: share a Chrome tab with audio enabled, or choose a loopback in PC audio source.');
-      }
+      const warnings = [
+        captureDetails.microphoneWarning,
+        settings.systemAudio && !captureDetails.systemAudioAvailable
+          ? captureDetails.systemAudioWarning ?? 'No system/tab audio track was provided. Enable audio sharing in the browser dialog; on Linux, share a Chrome tab.'
+          : undefined,
+      ].filter(Boolean);
+      if (warnings.length) setWarning(`${warnings.join(' ')} Recording continues with available tracks.`);
       startedAt.current = performance.now();
       updateStatus('recording');
     } catch (err) {
